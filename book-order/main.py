@@ -1,25 +1,20 @@
-import logging
+from asyncio.log import logger
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from src.routers import routes
-
-
-# Configure basic logging for application
-logging.getLogger("asyncio").setLevel(logging.DEBUG)
-logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(asctime)s - %(message)s')
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Must us init codes here before application startup
-    logging.info("*** Starting book-repository application...")
+    # Startup code (runs before application startup)
+    logger.info("Running startup tasks...")
+    logger.info("Startup tasks completed")
     yield
     # Shutdown code (runs after application shutdown)
-    logging.info("*** Shutdown book-repository completed")
+    logger.info("Running shutdown tasks...")
+    logger.info("Shutdown tasks completed")
     # This is where you put code that was previously in @app.on_event("shutdown")
-    # define a lifespan method for fastapi
-
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(routes.router)
@@ -32,7 +27,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "PUT", "POST", "DELEte"],
+    allow_methods=["GET", "PUT"],
     allow_headers=["Authorization", "Content-Type"]
 )
 
+#app.include_router(routes.routers)
