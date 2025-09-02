@@ -2,7 +2,6 @@ from asyncio.log import logger
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from src.routers import routes
 
 @asynccontextmanager
@@ -27,8 +26,6 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "PUT"],
+    allow_methods=["GET","POST"],
     allow_headers=["Authorization", "Content-Type"]
 )
-
-#app.include_router(routes.routers)

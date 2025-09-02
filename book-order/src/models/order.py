@@ -5,3 +5,4 @@ class Order(BaseModel):
     isbn: str
     price: float
     count: int
+    customer: str
