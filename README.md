@@ -2,8 +2,7 @@
 
 ## Summary
 
-Simulating a cloud based online book selling market and a customer service agentic AI as a sales person and customer support for handling book orders.
-Running codes locally using docker images and docker desktop. For AI programming using local Ollama models. For messaging using Confluent Kafka running locally using Docker Desktop. For datastorage using MongoDB locally as well.
+Simulating a cloud based online book selling market with an agentic AI as customer service for sales and support. Running codes locally using docker images and docker desktop. For AI programming using local Ollama models. For messaging using Confluent Kafka running locally using Docker Desktop. For datastorage using MongoDB locally as well.
 
 ### Guideline
 
@@ -26,3 +25,4 @@ This project is under development...
 #### book-repository service
 
 Handling book database operations. Connecting to a MongoDB 
+
