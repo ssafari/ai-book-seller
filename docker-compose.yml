@@ -3,6 +3,9 @@ services:
     image: book-order:latest
     ports:
       - "8001:8000"
+    networks:
+      - kafka-network
+      - backend
   broker:
     image: confluentinc/cp-server:8.0.0
     hostname: broker
@@ -10,6 +13,8 @@ services:
     ports:
       - "9092:9092"
       - "9101:9101"
+    networks:
+      - kafka-network
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
