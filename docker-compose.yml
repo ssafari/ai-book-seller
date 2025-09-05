@@ -1,11 +1,4 @@
 services:
-  book-order:
-    image: book-order:latest
-    ports:
-      - "8001:8000"
-    networks:
-      - kafka-network
-      - backend
   broker:
     image: confluentinc/cp-server:8.0.0
     hostname: broker
@@ -239,7 +232,7 @@ services:
     hostname: flink-jobmanager
     container_name: flink-jobmanager
     ports:
-    - 9081:9081
+      - 9081:9081
     command: jobmanager
     environment:
     - |
@@ -252,7 +245,7 @@ services:
     hostname: flink-taskmanager
     container_name: flink-taskmanager
     depends_on:
-    - flink-jobmanager
+      - flink-jobmanager
     command: taskmanager
     scale: 1
     environment:
@@ -260,11 +253,10 @@ services:
       FLINK_PROPERTIES=
       jobmanager.rpc.address: flink-jobmanager
       taskmanager.numberOfTaskSlots: 10
-      
-networks:
-  kafka-network:
-    driver: bridge
-    driver_opts:
-      com.docker.network.bridge.host_binding_ipv4: "127.0.0.1"
-  backend:
-    driver: bridge
+
+  book-order:
+    image: book-order:latest
+    ports:
+      - "8001:8000"
+    depends_on:
+      - broker

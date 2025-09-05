@@ -4,7 +4,7 @@ from confluent_kafka import Producer
 class KafkaProducer():
     ''' Kafka broker configuration for local instance '''
     producer_config = {
-        'bootstrap.servers': 'localhost:9092'  # Replace with your Kafka broker address if different
+        'bootstrap.servers': 'broker:29092'  # Replace with localhost:9092 if you are running as standalone app not in container
     }
     TOPIC = "book-order"
 
