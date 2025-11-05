@@ -22,10 +22,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-#app.include_router(routes.router)
+app.include_router(routes.router)
 
 origins = [
-    "http://localhost:8005",
+    "http://localhost:8000",
 ]
 
 app.add_middleware(

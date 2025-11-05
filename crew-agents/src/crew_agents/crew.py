@@ -5,9 +5,8 @@ from pathlib import Path
 from crewai import LLM
 import yaml
 from typing import List
-# If you want to run a snippet of code before or after the crew starts,
-# you can use the @before_kickoff and @after_kickoff decorators
-# https://docs.crewai.com/concepts/crews#example-crew-class-with-decorators
+from langchain_community.chat_models import ChatOllama
+from langchain_core.prompts import ChatPromptTemplate
 
 @CrewBase
 class CrewAgents():
@@ -15,13 +14,6 @@ class CrewAgents():
 
     agents: List[BaseAgent]
     tasks: List[Task]
-
-    # Learn more about YAML configuration files here:
-    # Agents: https://docs.crewai.com/concepts/agents#yaml-configuration-recommended
-    # Tasks: https://docs.crewai.com/concepts/tasks#yaml-configuration-recommended
-    
-    # If you would like to add tools to your agents, you can learn more about it here:
-    # https://docs.crewai.com/concepts/agents#agent-tools
 
     def __init__(self) -> None:
         # Get the current script's folder
@@ -39,32 +31,34 @@ class CrewAgents():
         except FileNotFoundError as e:
             print(f"Error: file not found in the same directory: {e}")
 
+        self.llm = ChatOllama(model="mistral")
+    
+
     @agent
-    def researcher(self) -> Agent:
+    def customer_service(self) -> Agent:
         return Agent(
-            config=self.agents_config.get('researcher'),
+            config=self.agents_config.get('customer_service'),
+            llm=self.llm,
             verbose=True
         )
 
     @agent
-    def reporting_analyst(self) -> Agent:
+    def payment_service(self) -> Agent:
         return Agent(
-            config=self.agents_config.get('reporting_analyst'),
+            config=self.agents_config.get('payment_service'),
+            llm=self.llm,
             verbose=True
         )
-
-    # To learn more about structured task outputs,
-    # task dependencies, and task callbacks, check out the documentation:
-    # https://docs.crewai.com/concepts/tasks#overview-of-a-task
+    
     @task
-    def research_task(self) -> Task:
+    def customer_service_task(self) -> Task:
         return Task(
             config=self.tasks_config.get('research_task'),
             output_file='report.md'
         )
 
     @task
-    def reporting_task(self) -> Task:
+    def payment_service_task(self) -> Task:
         return Task(
             config=self.tasks_config.get('reporting_task'),
             output_file='report.md'
@@ -73,8 +67,6 @@ class CrewAgents():
     @crew
     def crew(self) -> Crew:
         """Creates the CrewAgents crew"""
-        # To learn how to add knowledge sources to your crew, check out the documentation:
-        # https://docs.crewai.com/concepts/knowledge#what-is-knowledge
 
         return Crew(
             agents=self.agents, # Automatically created by the @agent decorator

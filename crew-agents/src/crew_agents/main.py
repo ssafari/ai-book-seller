@@ -23,7 +23,7 @@ def run():
     }
     
     try:
-        CrewAgents().crew().kickoff(inputs=inputs)
+        CrewAgents().crew().kickoff()
     except Exception as e:
         raise Exception(f"An error occurred while running the crew: {e}")
 
