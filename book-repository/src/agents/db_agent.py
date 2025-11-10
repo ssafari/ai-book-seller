@@ -70,7 +70,6 @@ async def get_table_names_async() -> list[str]:
     """Returns a list of all table names in the database."""
     async_session = await PgClient().async_session()
     async with async_session() as session:
-        # Implement your async logic to fetch table names
         #inspect(async_engine).get_table_names()
         return ["bookstore"]
 
