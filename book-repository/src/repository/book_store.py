@@ -1,11 +1,11 @@
 ''' book_store.py '''
 import asyncio
 import pandas as pd
+import numpy as np
 import kagglehub
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 from pgvector.sqlalchemy import Vector
-from langchain_postgres import PGVectorStore, Column
+from langchain_postgres import PGVectorStore, PGEngine, Column
 from langchain_ollama import OllamaEmbeddings
 from src.postgres.pg_client import PgClient
 
@@ -18,54 +18,68 @@ class BookStore:
     def __init__(self, table_name: str, vsize: int):
         self.table_name = table_name
         self.vector_size = vsize
+        self.embeddings = OllamaEmbeddings(model="nomic-embed-text")
 
-    def load_dataset_local(self, path: str, docname: str) -> pd.DataFrame:
+    def __load_dataset_local(self, path: str, docname: str) -> pd.DataFrame:
         ''' Load dataset from local direcotry'''
         df = pd.read_csv(path + docname)
         print("dataset shape:", df.shape)
         return df
 
-    def load_dataset_kaggle(self, dataset: str, doc: str) -> pd.DataFrame:
+    def __load_dataset_kaggle(self, dataset: str, doc: str) -> pd.DataFrame:
         ''' For dataset needs to be loaded from Kaggle website'''
         path = kagglehub.dataset_download(dataset)
         print("Path to dataset files:", path)
         df = pd.read_csv(path + doc, encoding='latin1')
         print("dataset shape:", df.shape)
-        df.drop(
-            ['isbn10', 'subtitle', 'thumbnail', 'published_year',	'num_pages',	'ratings_count'],
+        df.drop(['isbn10', 
+                 'subtitle', 
+                 'thumbnail', 
+                 'published_year',	
+                 'num_pages',	
+                 'ratings_count'],
             axis=1,
             inplace=True
         )
-        df.rename(columns={'isbn13': 'isbn'}, inplace=True)
+        df.rename(columns={'isbn13': 'isbn', 
+                           'authors': 'author', 
+                           'categories': 'genre', 
+                           'average_rating': 'rating'}, 
+                           inplace=True)
+        df = df.dropna(subset=['author', 'genre', 'description'])
+        print(f"final dataframe shape: {df.shape}")
+        df["meta_data"] = df.apply(lambda row: {
+            "title": row["title"],
+            "author": row["author"],
+            "genre": row["genre"],
+            "description": row["description"]
+        }, axis = 1)
+        df['meta_data'] = df['meta_data'].apply(str)
+        self.__chunk_data(df, 1000)
         return df
 
-    def create_metadata(self, df):
-        ''' Create metadata as content creating embeddingsfor vector database'''
-        df["content"] = str(df.apply(lambda row: {
-            "title": row["title"],
-            "authors": row["authors"],
-            "categories": row["categories"],
-            "description": row["description"]
-        }, axis = 1))
+    def __chunk_data(self, df, chunk_size):
+        ''' Create multiple CSV files '''
+        num_chunks = int(np.ceil(len(df) / chunk_size))
+        chunks = np.array_split(df, num_chunks)
+        cnt = 0
+        for idx, chunk in enumerate(chunks):
+            file_name = f'csv/df_chunk_{idx}.csv'
+            chunk.to_csv(file_name, index=False)
+            cnt += 1
+        print(f"DataFrame successfully chunked into {cnt} CSV files.")
 
     def create_embeddings(self, row):
         ''' start create embeddings of the text '''
-        combined_text = f'''{row["title"]} {row["authors"]}
-                        {row["categories"]} {row["description"]}'''
-        return self.get_ollama_embeddings(combined_text)
-    
-    async def add_vector_column(self, engine: AsyncEngine, table_name):
-        ''' call this if need to add embedding column '''
-        async with engine.begin() as con:
-            await con.execute(text(f"ALTER TABLE {table_name} ADD COLUMN embedding VECTOR(768);"))
-            await con.commit()
+        combined_text = f'''{row["title"]} {row["author"]}
+                        {row["genre"]} {row["description"]}'''
+        return self.__get_document_embeddings(combined_text)
 
-    async def store_dataframe(self, table_name:str, engine: AsyncEngine, df: pd.DataFrame):
+    async def __store_dataframe(self, table_name:str, engine: AsyncEngine, df: pd.DataFrame):
         ''' 
         Define the data type mapping for the 'embedding' column
         Store processed clean dataset to database 
         '''
-        self.create_metadata(df)
         print(" --- Start adding embeddings to dataframe ---\n")
         df["embedding"] = df.apply(self.create_embeddings, axis = 1)
         print("\n --- Start inserting dataframe to the database ---")
@@ -73,11 +87,12 @@ class BookStore:
             'embedding': Vector(768)  
         }
         async with engine.begin() as conn:
-            await conn.run_sync(lambda sync_conn: df.to_sql(table_name, 
-                                                            sync_conn, 
-                                                            if_exists='append', 
-                                                            index=False, 
+            await conn.run_sync(lambda sync_conn: df.to_sql(table_name,
+                                                            sync_conn,
+                                                            if_exists='append',
+                                                            index=False,
                                                             dtype=dtype_mapping))
+            #conn.aclose()
         print("\n --- Completed inserting of dataframe ---")
 
     def read_table_to_dataframe(self, table_name, engine):
@@ -86,25 +101,26 @@ class BookStore:
         print(f"\nData read from SQL table: '{table_name}'")
         print(df_from_sql.shape())
 
-    def get_ollama_embeddings(self, doc: str):
+    def __get_document_embeddings(self, doc: str):
         ''' Helper function: get embeddings for a text '''
-        embeddings = OllamaEmbeddings(model="nomic-embed-text")
-        document_vectors = embeddings.embed_documents(doc.replace('\n',''))
+        document_vectors = self.embeddings.embed_documents(doc.replace('\n',''))
         return document_vectors[0]
         
-    def create_pg_vectorestore(self, engine, table_name):
+    async def __create_pg_vectorestore(self, engine: PGEngine):
         ''' 
         This will create a vector store from an existing
         SQL table. It appends embeddings into allocated
         vector embedding column.
         '''
-        embeddings = OllamaEmbeddings(model="llama3.2:latest")
-        vector_store = PGVectorStore.create(
+        print("Get vectorstore embeddings")
+        vector_store = await PGVectorStore.create(
             engine=engine,
-            table_name=table_name,               #"your_existing_table",
-            content_column="content",            # Column with text content
+            table_name=self.table_name,               #"your_existing_table",
+            id_column="isbn",
+            content_column="description",            # Column with text content
             embedding_column="embedding",        # Column to store embeddings
-            embedding_service=embeddings,
+            embedding_service=self.embeddings,
+            metadata_columns=["title", "author", "genre", "description"]
         )
         return vector_store
 
@@ -126,15 +142,29 @@ class BookStore:
                     vector_size=self.vector_size,
                     metadata_columns=METADATA_COLUMNS
               )
-        
+
+    async def save(self, path:str, doc:str):
+        #self.__load_dataset_kaggle('dylanjcastillo/7k-books-with-metadata', '/books.csv')
+        df_books = self.__load_dataset_local(path,doc)
+        pgclient = PgClient()
+        await self.__store_dataframe(pgclient.TABLE_NAME, pgclient.engine, df_books)
+
+
+    async def search(self, query='a children story'):
+        pgclient = PgClient()
+        v_store = await self.__create_pg_vectorestore(pgclient.pg_engine)
+        print("Start similarity search")
+        results = await v_store.asimilarity_search(query, k=2)
+        for doc in results:
+            print(doc.metadata['title'])
+            print(doc.page_content)
+
+
 async def async_main():
     ''' main function for running async methods '''
-    store = BookStore('books', 768)
-    books = store.load_dataset_local('csv/','output_np_chunk_1.csv')
-    print("\n Start PGClient ... \n")
-    pgclient = PgClient()
-    #await store.add_vector_column(pgclient.engine, pgclient.TABLE_NAME)
-    await store.store_dataframe(pgclient.TABLE_NAME, pgclient.engine, books)
+    bookstore = BookStore('bookstore', 768)
+    await bookstore.search('fiction book')
+    #await bookstore.save('csv/','df_chunk_1.csv')
 
 
     # Example Usage

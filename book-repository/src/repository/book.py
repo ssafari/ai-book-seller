@@ -1,4 +1,6 @@
-from sqlalchemy import Column, String, Text, DOUBLE_PRECISION, BigInteger
+from pgvector.sqlalchemy import Vector
+#from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, String, DOUBLE_PRECISION, BigInteger, TEXT
 from sqlalchemy.ext.declarative import declarative_base
 
 
@@ -8,19 +10,20 @@ Base = declarative_base()
 # Define the Book model
 class Book(Base):
     ''' Book Store table '''
-    __tablename__ = 'books'
+    __tablename__ = 'bookstore'
 
     isbn = Column(BigInteger, primary_key=True)
     title = Column(String(250), nullable=False)
-    authors = Column(String(250), nullable=False)
-    categories = Column(String(100))
-    description = Column(Text)
+    author = Column(String(250), nullable=False)
+    genre = Column(String(100))
+    description = Column(TEXT)
     rating = Column(DOUBLE_PRECISION)
-    content = Column(Text)
+    meta_data = Column(TEXT)
+    embedding = Column(Vector(768))
 
     def __init__(self):
         pass
 
     def __repr__(self):
-        return f"<Book(title='{self.title}', author='{self.authors}', genre='{self.categories}')>"
+        return f"<Book(title='{self.title}', author='{self.author}', genre='{self.category}')>"
 
