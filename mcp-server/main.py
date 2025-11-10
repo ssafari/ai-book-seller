@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
     # This is where you put code that was previously in @app.on_event("shutdown")
 
 
-app = FastAPI(title="Weather Updates API", lifespan=lifespan)
+app = FastAPI(title="Updates API", lifespan=lifespan)
 app.include_router(routes.router)
 
 origins = [
