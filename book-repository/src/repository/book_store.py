@@ -162,9 +162,9 @@ class BookStore:
 
 async def async_main():
     ''' main function for running async methods '''
-    bookstore = BookStore('bookstore', 768)
-    await bookstore.search('fiction book')
-    #await bookstore.save('csv/','df_chunk_1.csv')
+    bookstore = BookStore('bdf_bookstore', 768)
+    #await bookstore.search('fiction book')
+    await bookstore.save('csv/','df_chunk_1.csv')
 
 
     # Example Usage

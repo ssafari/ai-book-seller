@@ -10,7 +10,7 @@ Base = declarative_base()
 # Define the Book model
 class Book(Base):
     ''' Book Store table '''
-    __tablename__ = 'bookstore'
+    __tablename__ = 'bdf_bookstore'
 
     isbn = Column(BigInteger, primary_key=True)
     title = Column(String(250), nullable=False)
@@ -25,5 +25,5 @@ class Book(Base):
         pass
 
     def __repr__(self):
-        return f"<Book(title='{self.title}', author='{self.author}', genre='{self.category}')>"
+        return f"<Book(title='{self.title}', author='{self.author}', genre='{self.genre}')>"
 

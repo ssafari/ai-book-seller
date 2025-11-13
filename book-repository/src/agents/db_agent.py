@@ -1,21 +1,26 @@
 '''  DbAgent.py '''
+import os
 import asyncio
+from dotenv import load_dotenv
 from sqlalchemy import text
 from langchain.tools import tool
-from langchain.agents import create_agent
 from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 from langchain_classic.agents import create_react_agent, AgentExecutor
-from src.agents.db_prompt import get_dialect_prompt
 from src.postgres.pg_client import PgClient
+from src.repository.book_store import BookStore
+
+
+load_dotenv()
 
 class DbAgent:
     ''' An agent load a csv file and create embeddings '''
 
     prompt = PromptTemplate.from_template("""
         You are a helpful AI assistant that can answer questions about a SQL database of
-        booksore table storing books information. You will help users to find the books 
-        or information about the bookstore.                               
+        bdf_bookstore table storing books information. You will help users to find the books 
+        or information about the bdf_bookstore table.                               
         You have access to the following tools: {tools}
 
         Use the following format:
@@ -38,8 +43,16 @@ class DbAgent:
 
     def __init__(self):
         ''' Initialize your LLM (e.g., OpenAI)'''
-        self.llm = ChatOllama(model="llama3.2:latest")
-        self.toolkit = [get_table_names_async, execute_sql_query_async]
+        self.llm = ChatOllama(model="mistral:latest")
+
+        # self.llm = ChatOpenAI(
+        #     model="gpt-3.5-turbo",
+        #     api_key=os.getenv("OPENAI_LLM_API_KEY"),
+        #     temperature=0,  # Adjust temperature for desired creativity/determinism
+        #     max_tokens=100,  # Limit the response length if needed
+        #     timeout=30,       # Set a timeout for the API call
+        # )
+        self.toolkit = [get_table_name, execute_sql_query]
 
         for toolk in self.toolkit:
             print(f"{toolk.name}: {toolk.description}\n")
@@ -49,7 +62,12 @@ class DbAgent:
             tools=self.toolkit,
             prompt=self.prompt
         )
-        self.agent_executor = AgentExecutor(agent=self.react_agent, tools=self.toolkit, verbose=True)
+        self.agent_executor = AgentExecutor(
+            agent=self.react_agent, 
+            tools=self.toolkit, 
+            handle_parsing_errors=True,
+            verbose=True
+        )
 
 
     async def execute(self, query):
@@ -57,38 +75,38 @@ class DbAgent:
         response = await self.agent_executor.ainvoke({"input": {query}})
         print(f" ===> Agent response: {response['output']}")
 
-    def create(self):
-        ''' This is another way to create SQL agent using ReAct agent libraries '''
-        agent = create_agent(
-            self.llm,
-            self.toolkit,
-            system_prompt=get_dialect_prompt,
-        )
+    # def create(self):
+    #     ''' This is another way to create SQL agent using ReAct agent libraries '''
+    #     agent = create_agent(
+    #         self.llm,
+    #         self.toolkit,
+    #         system_prompt=get_dialect_prompt,
+    #     )
 
 @tool
-async def get_table_names_async() -> list[str]:
+def get_table_name() -> str:
     """Returns a list of all table names in the database."""
-    async_session = await PgClient().async_session()
-    async with async_session() as session:
+    # async_session = await PgClient().async_session()
+    # async with async_session().begin() as conn:
         #inspect(async_engine).get_table_names()
-        return ["bookstore"]
+    return "bdf_bookstore"
 
 @tool
-async def execute_sql_query_async(query: str) -> str:
+async def execute_sql_query(query: str) -> str:
     """Executes a SQL query and returns the results."""
-    #print(f"SQL query: {query}")
-    async_session = await PgClient().async_session()
-    async with async_session() as session:
+    async with PgClient().async_session() as session:
         try:
             result = await session.execute(text(query))
             # Process result as needed, e.g., fetch all rows
-            return str(result.fetchall()) # Replace with appropriate result handling
+            return str(result.scalars().all())
         except Exception as e:
             return f"Error executing query: {e}"
             
 async def async_main() -> None:
     agent = DbAgent()
-    await agent.execute("how many books of genre Fiction do we have?")
+    await agent.execute("do we have children books?")
+    #bookstore = BookStore('bdf_bookstore', 768)
+    #await bookstore.search("List of titles written by author 'Agatha Christie'.")
 
 # Example Usage
 if __name__ == "__main__":

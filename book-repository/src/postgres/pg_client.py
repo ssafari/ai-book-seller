@@ -1,15 +1,15 @@
 import asyncio
 from langchain_postgres import PGEngine
 from langchain_community.utilities import SQLDatabase
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, AsyncSession
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, async_sessionmaker
 from src.repository.book import Base
 
 class PgClient:
     ''' creates client connection to the database'''
 
     CONNECTION_STRING = "postgresql+asyncpg://postgres:postgres@localhost:5432/projects"
-    TABLE_NAME = "bookstore"
+    TABLE_NAME = "bdf_bookstore"
     VECTOR_SIZE = 768
     db_name = "projects"
     pg_engine: PGEngine
@@ -22,8 +22,12 @@ class PgClient:
         )
         print("create database engine")
         self.pg_engine = PGEngine.from_engine(engine=self.engine)
-        #async with self.engine.begin() as conn:
-        #self.db = SQLDatabase(engine=self.engine)
+        self.async_session = async_sessionmaker(
+                autocommit=False,
+                autoflush=False,
+                bind=self.engine,
+                expire_on_commit=False
+        )
         
     async def get_db(self):
         async with self.engine.begin() as conn:
@@ -34,21 +38,24 @@ class PgClient:
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-    async def async_session(self):
-        async_session = sessionmaker(
-                autocommit=False,
-                autoflush=False,
-                bind=self.engine,
-                class_=AsyncSession
-        )
-        return async_session
+    
+    async def execute_sql_query(self) -> str:
+        """Executes a SQL query and returns the results."""
+        async with self.async_session() as session:
+            try:
+                result = await session.execute(text("SELECT title FROM bdf_bookstore WHERE genre = 'Fiction' LIMIT 3;"))
+                # Process result as needed, e.g., fetch all rows
+                print(f"===> output {str(result.scalars().all())}")
+                return str(result.fetchall())
+            except Exception as e:
+                return f"Error executing query: {e}"
 
 async def async_main() -> None:
     ''' main function for running async methods '''
     print("\n Start PGClient ... \n")
     client = PgClient()
-    await client.create_books_table()
-    
+    await client.execute_sql_query()
+
 
 if __name__ == "__main__":
     asyncio.run(async_main())
