@@ -13,7 +13,8 @@ from src.postgres.pg_client import PgClient
 class BookStore:
     ''' It reads data from Kaggle dataset cvs file and cache 
         it as dataframe in order to prepare data for storing
-        into the postgres database 
+        into the postgres database and provides vectore store
+        for similarity search
     '''
     def __init__(self, table_name: str, vsize: int):
         self.table_name = table_name
@@ -115,9 +116,9 @@ class BookStore:
         print("Get vectorstore embeddings")
         vector_store = await PGVectorStore.create(
             engine=engine,
-            table_name=self.table_name,               #"your_existing_table",
+            table_name=self.table_name,               
             id_column="isbn",
-            content_column="description",            # Column with text content
+            content_column="description",        # Column with text content
             embedding_column="embedding",        # Column to store embeddings
             embedding_service=self.embeddings,
             metadata_columns=["title", "author", "genre", "description"]

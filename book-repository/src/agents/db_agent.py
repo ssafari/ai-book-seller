@@ -42,7 +42,7 @@ class DbAgent:
     )
 
     def __init__(self):
-        ''' Initialize your LLM (e.g., OpenAI)'''
+        ''' Initialize your LLM either using local Ollama or OpenAI '''
         self.llm = ChatOllama(model="mistral:latest")
 
         # self.llm = ChatOpenAI(
@@ -71,7 +71,7 @@ class DbAgent:
 
 
     async def execute(self, query):
-        ''' Create the SQL Agent '''
+        ''' Invoke the SQL Agent '''
         response = await self.agent_executor.ainvoke({"input": {query}})
         print(f" ===> Agent response: {response['output']}")
 
@@ -103,6 +103,7 @@ async def execute_sql_query(query: str) -> str:
             return f"Error executing query: {e}"
             
 async def async_main() -> None:
+    ''' Just for testing functionality of the Agent'''
     agent = DbAgent()
     await agent.execute("do we have children books?")
     #bookstore = BookStore('bdf_bookstore', 768)
