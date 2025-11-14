@@ -27,7 +27,7 @@ class BookStore:
         print("dataset shape:", df.shape)
         return df
 
-    def __load_dataset_kaggle(self, dataset: str, doc: str) -> pd.DataFrame:
+    def load_dataset_kaggle(self, dataset: str, doc: str):
         ''' For dataset needs to be loaded from Kaggle website'''
         path = kagglehub.dataset_download(dataset)
         print("Path to dataset files:", path)
@@ -44,20 +44,21 @@ class BookStore:
         )
         df.rename(columns={'isbn13': 'isbn', 
                            'authors': 'author', 
-                           'categories': 'genre', 
+                           'categories': 'category', 
                            'average_rating': 'rating'}, 
                            inplace=True)
-        df = df.dropna(subset=['author', 'genre', 'description'])
+        df = df.dropna(subset=['author', 'category', 'description'])
+        df['category'] = df['category'].str.lower()
         print(f"final dataframe shape: {df.shape}")
         df["meta_data"] = df.apply(lambda row: {
             "title": row["title"],
             "author": row["author"],
-            "genre": row["genre"],
+            "category": row["category"],
             "description": row["description"]
         }, axis = 1)
         df['meta_data'] = df['meta_data'].apply(str)
         self.__chunk_data(df, 1000)
-        return df
+        
 
     def __chunk_data(self, df, chunk_size):
         ''' Create multiple CSV files '''
@@ -73,7 +74,7 @@ class BookStore:
     def create_embeddings(self, row):
         ''' start create embeddings of the text '''
         combined_text = f'''{row["title"]} {row["author"]}
-                        {row["genre"]} {row["description"]}'''
+                        {row["category"]} {row["description"]}'''
         return self.__get_document_embeddings(combined_text)
 
     async def __store_dataframe(self, table_name:str, engine: AsyncEngine, df: pd.DataFrame):
@@ -121,7 +122,7 @@ class BookStore:
             content_column="description",        # Column with text content
             embedding_column="embedding",        # Column to store embeddings
             embedding_service=self.embeddings,
-            metadata_columns=["title", "author", "genre", "description"]
+            metadata_columns=["title", "author", "category", "description"]
         )
         return vector_store
 
@@ -145,13 +146,14 @@ class BookStore:
               )
 
     async def save(self, path:str, doc:str):
-        #self.__load_dataset_kaggle('dylanjcastillo/7k-books-with-metadata', '/books.csv')
+        ''' Save the CSV files into database '''
         df_books = self.__load_dataset_local(path,doc)
         pgclient = PgClient()
         await self.__store_dataframe(pgclient.TABLE_NAME, pgclient.engine, df_books)
 
 
     async def search(self, query='a children story'):
+        ''' Peform the similarity serach using vector store '''
         pgclient = PgClient()
         v_store = await self.__create_pg_vectorestore(pgclient.pg_engine)
         print("Start similarity search")
@@ -165,6 +167,7 @@ async def async_main():
     ''' main function for running async methods '''
     bookstore = BookStore('bdf_bookstore', 768)
     #await bookstore.search('fiction book')
+    #bookstore.load_dataset_kaggle('dylanjcastillo/7k-books-with-metadata', '/books.csv')
     await bookstore.save('csv/','df_chunk_1.csv')
 
 

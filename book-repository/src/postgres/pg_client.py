@@ -1,9 +1,9 @@
 import asyncio
 from langchain_postgres import PGEngine
 from langchain_community.utilities import SQLDatabase
-from sqlalchemy import text
+from sqlalchemy import text, inspect, Table
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, async_sessionmaker
-from src.repository.book import Base
+from src.repository.book import Base, Book
 
 class PgClient:
     ''' creates client connection to the database'''
@@ -43,19 +43,39 @@ class PgClient:
         """Executes a SQL query and returns the results."""
         async with self.async_session() as session:
             try:
-                result = await session.execute(text("SELECT title FROM bdf_bookstore WHERE genre = 'Fiction' LIMIT 3;"))
+                result = await session.execute(text("SELECT title FROM bdf_bookstore WHERE category = 'Fiction' LIMIT 3;"))
                 # Process result as needed, e.g., fetch all rows
                 print(f"===> output {str(result.scalars().all())}")
                 return str(result.fetchall())
             except Exception as e:
                 return f"Error executing query: {e}"
 
+    async def get_table_names(self):
+        async with self.engine.connect() as conn:
+            table_names = await conn.run_sync(lambda sync_conn: inspect(sync_conn).get_table_names())
+            return table_names
+            
+    def get_table_schema(self):
+        ''' Returns name of columns'''
+        return [column.name for column in Book.__table__.columns]
+        # async with self.engine.connect() as conn:
+        #     metadata = Base.metadata
+        #     table = await conn.run_sync(
+        #         lambda sync_conn: Table(self.TABLE_NAME, metadata, autoload_with=sync_conn)
+        #     )
+        #     return table.columns
+        
 async def async_main() -> None:
     ''' main function for running async methods '''
     print("\n Start PGClient ... \n")
     client = PgClient()
-    await client.execute_sql_query()
+    #await client.create_books_table()
+    #await client.execute_sql_query()
 
+    # table_names = await client.get_table_schema()
+    # print(table_names)
+    column_names = [column.name for column in Book.__table__.columns]
+    print(column_names)
 
 if __name__ == "__main__":
     asyncio.run(async_main())

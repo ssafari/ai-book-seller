@@ -1,5 +1,4 @@
 from pgvector.sqlalchemy import Vector
-#from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import Column, String, DOUBLE_PRECISION, BigInteger, TEXT
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -15,7 +14,7 @@ class Book(Base):
     isbn = Column(BigInteger, primary_key=True)
     title = Column(String(250), nullable=False)
     author = Column(String(250), nullable=False)
-    genre = Column(String(100))
+    category = Column(String(100))
     description = Column(TEXT)
     rating = Column(DOUBLE_PRECISION)
     meta_data = Column(TEXT)
@@ -25,5 +24,5 @@ class Book(Base):
         pass
 
     def __repr__(self):
-        return f"<Book(title='{self.title}', author='{self.author}', genre='{self.genre}')>"
+        return f"<Book(title='{self.title}', author='{self.author}', category='{self.category}')>"
 

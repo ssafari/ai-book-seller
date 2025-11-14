@@ -52,7 +52,7 @@ class DbAgent:
         #     max_tokens=100,  # Limit the response length if needed
         #     timeout=30,       # Set a timeout for the API call
         # )
-        self.toolkit = [get_table_name, execute_sql_query]
+        self.toolkit = [get_table_name, get_table_schema, execute_sql_query]
 
         for toolk in self.toolkit:
             print(f"{toolk.name}: {toolk.description}\n")
@@ -85,11 +85,16 @@ class DbAgent:
 
 @tool
 def get_table_name() -> str:
-    """Returns a list of all table names in the database."""
+    """Returns the table name."""
     # async_session = await PgClient().async_session()
     # async with async_session().begin() as conn:
         #inspect(async_engine).get_table_names()
     return "bdf_bookstore"
+
+@tool
+def get_table_schema() -> list:
+    """ Returns the table schema """
+    return PgClient().get_table_schema()
 
 @tool
 async def execute_sql_query(query: str) -> str:
@@ -105,7 +110,7 @@ async def execute_sql_query(query: str) -> str:
 async def async_main() -> None:
     ''' Just for testing functionality of the Agent'''
     agent = DbAgent()
-    await agent.execute("do we have children books?")
+    await agent.execute("List 3 book titles of category fiction.")
     #bookstore = BookStore('bdf_bookstore', 768)
     #await bookstore.search("List of titles written by author 'Agatha Christie'.")
 
