@@ -7,6 +7,7 @@ from langchain.tools import tool
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
+from langchain_classic import hub
 from langchain_classic.agents import create_react_agent, AgentExecutor
 from src.postgres.pg_client import PgClient
 from src.repository.book_store import BookStore
@@ -18,10 +19,11 @@ class DbAgent:
     ''' An agent load a csv file and create embeddings '''
 
     prompt = PromptTemplate.from_template("""
-        You are a helpful AI assistant that can answer questions about a SQL database of
-        bdf_bookstore table storing books information. You will help users to find the books 
-        or information about the bdf_bookstore table.                               
-        You have access to the following tools: {tools}
+        You are a helpful AI assistant that can answer questions about a SQL database.
+        Given an input question, find the table and create a syntactically correct PostgreSQL query to run by
+        using provided tools.
+                                          
+        you have access to the following tools: {tools}
 
         Use the following format:
 
@@ -52,6 +54,7 @@ class DbAgent:
         #     max_tokens=100,  # Limit the response length if needed
         #     timeout=30,       # Set a timeout for the API call
         # )
+
         self.toolkit = [get_table_name, get_table_schema, execute_sql_query]
 
         for toolk in self.toolkit:
@@ -84,16 +87,16 @@ class DbAgent:
     #     )
 
 @tool
-def get_table_name() -> str:
-    """Returns the table name."""
+def get_table_name(name: str) -> str:
+    """ Get the table name """
     # async_session = await PgClient().async_session()
     # async with async_session().begin() as conn:
         #inspect(async_engine).get_table_names()
     return "bdf_bookstore"
 
 @tool
-def get_table_schema() -> list:
-    """ Returns the table schema """
+def get_table_schema(name: str) -> list:
+    """ Get the table schema """
     return PgClient().get_table_schema()
 
 @tool
@@ -110,7 +113,7 @@ async def execute_sql_query(query: str) -> str:
 async def async_main() -> None:
     ''' Just for testing functionality of the Agent'''
     agent = DbAgent()
-    await agent.execute("List 3 book titles of category fiction.")
+    await agent.execute("how many fiction books do we have?")
     #bookstore = BookStore('bdf_bookstore', 768)
     #await bookstore.search("List of titles written by author 'Agatha Christie'.")
 

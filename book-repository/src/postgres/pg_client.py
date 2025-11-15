@@ -57,6 +57,7 @@ class PgClient:
             
     def get_table_schema(self):
         ''' Returns name of columns'''
+        print("pgclient get_table_schema")
         return [column.name for column in Book.__table__.columns]
         # async with self.engine.connect() as conn:
         #     metadata = Base.metadata
