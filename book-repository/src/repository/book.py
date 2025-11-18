@@ -8,8 +8,8 @@ Base = declarative_base()
 
 # Define the Book model
 class Book(Base):
-    ''' Book Store table '''
-    __tablename__ = 'bdf_bookstore'
+    ''' Books table '''
+    __tablename__ = 'books'
 
     isbn = Column(BigInteger, primary_key=True)
     title = Column(String(250), nullable=False)
@@ -18,7 +18,7 @@ class Book(Base):
     description = Column(TEXT)
     rating = Column(DOUBLE_PRECISION)
     meta_data = Column(TEXT)
-    embedding = Column(Vector(768))
+    embedding = Column(Vector(1024))
 
     def __init__(self):
         pass

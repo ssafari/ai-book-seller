@@ -19,7 +19,7 @@ class BookStore:
     def __init__(self, table_name: str, vsize: int):
         self.table_name = table_name
         self.vector_size = vsize
-        self.embeddings = OllamaEmbeddings(model="nomic-embed-text")
+        self.embeddings = OllamaEmbeddings(model="qwen3-embedding:0.6b")
 
     def __load_dataset_local(self, path: str, docname: str) -> pd.DataFrame:
         ''' Load dataset from local direcotry'''
@@ -86,7 +86,7 @@ class BookStore:
         df["embedding"] = df.apply(self.create_embeddings, axis = 1)
         print("\n --- Start inserting dataframe to the database ---")
         dtype_mapping = {
-            'embedding': Vector(768)  
+            'embedding': Vector(self.vector_size)  
         }
         async with engine.begin() as conn:
             await conn.run_sync(lambda sync_conn: df.to_sql(table_name,
@@ -117,7 +117,7 @@ class BookStore:
         print("Get vectorstore embeddings")
         vector_store = await PGVectorStore.create(
             engine=engine,
-            table_name=self.table_name,               
+            table_name=self.table_name,
             id_column="isbn",
             content_column="description",        # Column with text content
             embedding_column="embedding",        # Column to store embeddings
@@ -131,7 +131,7 @@ class BookStore:
             This langchain_postgres will create a table
             with its default columns. It's good when we
             have unstrucuted data to save into pg table
-            with embedding vectore codes.
+            with embedding vector codes.
         '''
         METADATA_COLUMNS = [
             Column("author", "varchar(50)", True),
@@ -148,27 +148,29 @@ class BookStore:
     async def save(self, path:str, doc:str):
         ''' Save the CSV files into database '''
         df_books = self.__load_dataset_local(path,doc)
-        pgclient = PgClient()
-        await self.__store_dataframe(pgclient.TABLE_NAME, pgclient.engine, df_books)
+        pgclient = PgClient('books', 'bookstore.db')
+        await self.__store_dataframe(pgclient.table_name, pgclient.engine, df_books)
 
 
-    async def search(self, query='a children story'):
+    async def search(self, query='how many fiction books do we have ?'):
         ''' Peform the similarity serach using vector store '''
-        pgclient = PgClient()
+        pgclient = PgClient('books', 'bookstore.db')
         v_store = await self.__create_pg_vectorestore(pgclient.pg_engine)
-        print("Start similarity search")
+        print(query)
         results = await v_store.asimilarity_search(query, k=2)
+        print("="*100)
         for doc in results:
-            print(doc.metadata['title'])
-            print(doc.page_content)
+            print(f"Title: {doc.metadata['title']}")
+            print(f"description: {doc.page_content}")
+            print("="*100)
 
 
 async def async_main():
     ''' main function for running async methods '''
-    bookstore = BookStore('bdf_bookstore', 768)
-    #await bookstore.search('fiction book')
+    bookstore = BookStore('books', 1024)
+    await bookstore.search()
     #bookstore.load_dataset_kaggle('dylanjcastillo/7k-books-with-metadata', '/books.csv')
-    await bookstore.save('csv/','df_chunk_1.csv')
+    #await bookstore.save('csv/','df_chunk_1.csv')
 
 
     # Example Usage

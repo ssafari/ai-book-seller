@@ -1,24 +1,27 @@
 import asyncio
 from langchain_postgres import PGEngine
 from langchain_community.utilities import SQLDatabase
-from sqlalchemy import text, inspect, Table
+from sqlalchemy import text, inspect
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, async_sessionmaker
 from src.repository.book import Base, Book
 
 class PgClient:
     ''' creates client connection to the database'''
 
-    CONNECTION_STRING = "postgresql+asyncpg://postgres:postgres@localhost:5432/projects"
-    TABLE_NAME = "bdf_bookstore"
+    CONNECTION_STRING = "postgresql+asyncpg://postgres:postgres@localhost:5432/"
+    #TABLE_NAME = "bdf_bookstore"
     VECTOR_SIZE = 768
-    db_name = "projects"
+    #db_name = "projects"
     pg_engine: PGEngine
     engine: AsyncEngine
 
-    def __init__(self):
+    def __init__(self, table, db):
         # Create an SQLAlchemy Async Engine
+        self.table_name = table
+        database = self.CONNECTION_STRING+db
         self.engine = create_async_engine(
-            self.CONNECTION_STRING,
+            #self.CONNECTION_STRING,
+            database,
         )
         print("create database engine")
         self.pg_engine = PGEngine.from_engine(engine=self.engine)
@@ -43,7 +46,7 @@ class PgClient:
         """Executes a SQL query and returns the results."""
         async with self.async_session() as session:
             try:
-                result = await session.execute(text("SELECT title FROM bdf_bookstore WHERE category = 'Fiction' LIMIT 3;"))
+                result = await session.execute(text("SELECT title FROM books WHERE category = 'fiction' LIMIT 3;"))
                 # Process result as needed, e.g., fetch all rows
                 print(f"===> output {str(result.scalars().all())}")
                 return str(result.fetchall())
@@ -69,8 +72,8 @@ class PgClient:
 async def async_main() -> None:
     ''' main function for running async methods '''
     print("\n Start PGClient ... \n")
-    client = PgClient()
-    #await client.create_books_table()
+    client = PgClient("books", "bookstore.db")
+    await client.create_books_table()
     #await client.execute_sql_query()
 
     # table_names = await client.get_table_schema()
