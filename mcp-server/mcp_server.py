@@ -34,21 +34,21 @@ async def execute_sql_query_async(query: str) -> str:
             # Process result as needed, e.g., fetch all rows
             #return str(result.scalars().all())
             rows = result.fetchall()
-            return [row[0] for row in rows]
+            return str([row[0] for row in rows])
         except Exception as e:
             return f"Error executing query: {e}"
 
 
-@mcp.tool(name='get_tables_name', 
+@mcp.tool(name='get_tables_name',
           description='get the name of tables in database')
-async def get_tables_name(db_name: str) -> list[str]:
+async def get_tables_name() -> list[str]:
     ''' Get table names'''
     async_session = await get_pgsql_conn()
     async with async_session() as session:
-        result = await session.execute(text(f"""
-                                            SELECT tablename 
-                                            FROM {db_name} 
-                                            WHERE schemaname = 'public';
+        result = await session.execute(text("""
+                                                SELECT table_name 
+                                                FROM information_schema.tables 
+                                                WHERE table_schema = 'public';
                                             """))
         rows = result.fetchall()
         return [row[0] for row in rows]
@@ -68,7 +68,7 @@ async def get_table_schema(t_name: str) -> list:
                                             """
                                             )
                                         )
-        print(str(result.scalars().all()))
+        #print(str(result.scalars().all()))
         rows = result.fetchall()
         return [row[0] for row in rows]
 
