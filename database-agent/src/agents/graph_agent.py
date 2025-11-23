@@ -4,6 +4,7 @@ import asyncio
 from typing import Literal
 from dotenv import load_dotenv
 from fastmcp import Client
+from fastmcp.exceptions import ToolError
 from langgraph.prebuilt import ToolNode
 from langgraph.graph import MessagesState, StateGraph, START, END
 from langchain_openai import ChatOpenAI
@@ -51,8 +52,10 @@ class ReActAgent:
         You will call the appropriate tool to execute the query after running this check.
         """.format(dialect="sql")
     
-    def __init__(self):
-        self.client = Client("http://localhost:8003/mcp")
+    def __init__(self, mcp_client):
+        print('--- ReActAgent ---')
+        self.client = mcp_client
+        #self.client = Client("http://localhost:8003/mcp")
         self.llm = ChatOpenAI(
             model="gpt-3.5-turbo",
             api_key=os.getenv("OPENAI_LLM_API_KEY"),
@@ -197,14 +200,25 @@ class ReActAgent:
             
 async def async_main() -> None:
     ''' Just for testing functionality of the Agent'''
-    question = "what are Stephen King author book titles?"
-    agent = ReActAgent().agent
-    async for step in agent.astream(
-        {"messages": [{"role": "user", "content": question}]},
-        stream_mode="values",
-    ):
-        step["messages"][-1].pretty_print()
-
+    try:
+        client = Client("http://localhost:8003/mcp")
+        question = "what are Stephen King author book titles?"
+        agent = ReActAgent(client).agent
+        async for step in agent.astream(
+            {"messages": [{"role": "user", "content": question}]},
+            stream_mode="values",
+        ):
+            step["messages"][-1].pretty_print()
+    except ToolError as e:
+        print("\nERROR calling 'divide' tool:")
+        print(f"{type(e).__name__}: {e}")
+        #traceback.print_exc()
+    except TimeoutError:
+        print("\nERROR calling 'divide' tool: Call timed out.")
+    except Exception as e:
+        print("\nAn unexpected error occurred during tool call:")
+        print(f"{type(e).__name__}: {e}")
+        #traceback.print_exc()
     #display(Image(agent.get_graph().draw_mermaid_png()))
 
 # Example Usage
