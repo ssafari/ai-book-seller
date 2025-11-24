@@ -1,51 +1,26 @@
-# Book Seller Automation
+# BOOK SELLER APP
 
 ## Summary
 
-Simulating a cloud based online book selling market with an agentic AI as customer service for sales and support. Services run locally using docker images and docker desktop. 
-For our LLM we use local Ollama models. For messaging we use Confluent Kafka running locally using Docker Desktop. For datastorage using MongoDB locally as well.
+Simulating SOA online book selling market. Developing microservice providing APIs and automated services powered by AI agents.
 
-### Guideline
 
-In this simulation following techniques will be used:
-- microservice design using Python FastAPI.
-- Event-driven architecure using Kafka messaging.
-- Database storage using MongoDB.
-- LLM and Agentic AI for handling sales and orders.
+### database-agent:
 
-I want to use multiple ai agents as customer service. One agent will help the customer to find and to buy books. Another agent will take care of payment and send the order to a Kakfa network. Another agent will use KG (Neo4j) to make suggestion to customer finding similar book or from same author.  We need a service to extract data
-from web and save them into database. Gradually this guideline will be updated with project progress.
+A LangGraph react agent for creating SQL query, based on user search query.  This service will connect to MCP server for getting book information
+from the bookstore database. It will reasoning to create a sql query and send that to database for getting the result a user looking for.
 
-Book selling tasks are devided into these service:
 
-- **book-repository**
-- **book-order**
-- **book-shipping**
-- **crew-agents**
-- **data-pipline**
+### mcp-server:
 
-This project is under development...
+A service for providing tools for connecting to the postgres database and executing the sql queries.
 
-### book-repository service
 
-Handling book database operations. Connecting to a MongoDB and saving books information, kind of books inventory.
-(in progress...)
+### book-repository
 
-### book-order
+This service builds the book table database by loading CSV file from Kaggle and cleaning the data.  It creates embedding information for using
+as pgvector database for providing a vector-store for performing similarity search for no sql queries.
 
-A kafka producer service when the customer payment is cleared.
-(in progress...)
 
-### book-shipping
-
-TODO: A kafka listener will read the order and contact inventory to ship the book.
-
-### crew-agents
-
-TODO: AI agents for customer service
-
-### data-pipeline
-
-TODO: Searching web for finding books. 
 
 

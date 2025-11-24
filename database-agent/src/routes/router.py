@@ -11,8 +11,6 @@ router = APIRouter(
   tags=["books-agent"]
 )
 
-#client = Client("http://localhost:8003/mcp")
-
 @router.get("/health")
 async def health_check():
     ''' For service healthcheck '''
@@ -26,7 +24,7 @@ async def invoke_agent(request: InvokeRequest):
     try:
         client = Client("http://localhost:8003/mcp")
         # Configure the graph for execution.
-        # If a thread_id is provided, it can be used 
+        # If a thread_id is provided, it can be used
         # for persistent state across calls.
         config = {}
         if request.thread_id:
@@ -42,13 +40,13 @@ async def invoke_agent(request: InvokeRequest):
                   }, config=config)
         return {"response": result["messages"][-1].content}
     except ToolError as e:
-        print("\nERROR calling 'divide' tool:")
+        print("ERROR calling 'divide' tool:")
         print(f"{type(e).__name__}: {e}")
         #traceback.print_exc()
     except TimeoutError:
-        print("\nERROR calling 'divide' tool: Call timed out.")
+        print("ERROR calling 'divide' tool: Call timed out.")
     except Exception as e:
-        print("\nAn unexpected error occurred during tool call:")
+        print("An unexpected error occurred during tool call:")
         print(f"{type(e).__name__}: {e}")
     raise HTTPException(status_code=503, detail="Internal Server Error")
 
